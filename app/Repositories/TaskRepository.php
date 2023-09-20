@@ -5,7 +5,6 @@ namespace App\Repositories;
 use Carbon\Carbon;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Http\Request;
 use App\Models\ReasonForReject;
 use Illuminate\Support\Facades\Auth;
 use App\Interfaces\TaskRepositoryInterface;
@@ -14,202 +13,222 @@ use App\Exceptions\GerneralException;
 use DB;
 
 
-class TaskRepository implements TaskRepositoryInterface 
+class TaskRepository implements TaskRepositoryInterface
 {
- 
+
     protected $task;
 
-    public function __construct(Task $task ){
+    public function __construct(Task $task)
+    {
         $this->task = $task;
     }
 
-    public function getAllTasks(){
+    public function getAllTasks()
+    {
         $this->checkTaskExpired();
-        if(Auth::user()->hasRole('admin')){ 
-            $data = Task::all();    
-        }else{
-            $data = Task::where('assign_to',Auth::user()->id)->orWhere('created_by',Auth::user()->id)->get();
+        if (Auth::user()->hasRole('admin')) {
+            $data = Task::all();
+        } else {
+            $data = Task::where('assign_to', Auth::user()->id)->orWhere('created_by', Auth::user()->id)->get();
         }
-        $tasks = $data->map(function($task, $key) {
-            $task->is_mark = $this->isMark($task->id);
-            return $task;
-        });
-        return $tasks;   
-    }
-
-    public function getTask($id){
-        $task = Task::findOrFail($id);
-	    $task->is_mark = $this->isMark($id);
-        return $task;
-    }
-
-    public function createTask($data){   
-        if(isset($data['attachments'])){
-            $files =[];
-        
-            foreach($data['attachments'] as $key=>$file){
-                $files[] = $this->uploadFile($file);
-            }
-            $data['attachment'] = implode(",",$files);
-        }
-        if(isset($data['audio'])){
-          
-            $data['audio'] = $this->uploadFile($data['audio']);
-        }
-        $task = Task::create($data);
-        $this->notifyUser($task->assign_to , $task->status ,'new task' ,'task from '.Auth::user()->name.'', $task->id);
-        
-        return $task;
-
-    }
-
-    public function updateTask($status ,$id){
-        $task = Task::findOrFail($id);
-        $status_var = ['pending','approved','rejected','done','expired'];    
-        if($task->created_by == Auth::user()->id ||Auth::user()->hasRole('admin')){
-            $task = $this->updateStatus($task,(string)array_search ($status, $status_var));
-            if($status == 'rejected'){
-                $this->deleteTask($id);
-            }
-            $user = $task->assign_to;
-        }elseif($task->assign_to == Auth::user()->id && $status != 'rejected' ){
-            $task = $this->updateStatus($task,(string)array_search ($status, $status_var));
-            $user = $task->created_by;
-        }else{
-            throw new GerneralException("Unauthenticated",401);
-        }
-        $this->notifyUser($user, $status, 'task is'.$status.'', 'task from '.Auth::user()->name.'' , $task->id);
-        $this->deleteReason($id);
-        $task->is_mark = $this->isMark($task->id);
-
-        return $task;
-                        
-        
-
-    }
-
-    public function destoryTask($id){
-        $task = Task::findOrFail($id);
-        if($task->created_by == Auth::user()->id){
-            return $this->deleteTask($id);
-        }
-        throw new GerneralException("Unauthenticated",401);
-    }
-    
-    public function markTask($id){ 
-        $task = Task::findOrFail($id);
-        if($this->markPermission($task)){
-            $mark = Mark::firstOrCreate([ 'task_id' => $id]);
-            $task->is_mark = $this->isMark($id);
-            return $task;
-        }else{
-            throw new GerneralException("Unauthenticated",401);
-        }  
-    }
-    
-    public function unmarkTask($id){
-        $task = Task::findOrFail($id);
-        if($this->markPermission($task)){
-            $this->deleteMarkByTaskId($id);
-            return $task;
-        }else{
-            throw new GerneralException("Unauthenticated",401);
-        }
-    }
-
-    public function getReasonTask(){  
-        if(Auth::user()->hasRole('admin')){
-            $data  =ReasonForReject::all();
-        }else{
-            $data =ReasonForReject::join('tasks', 'tasks.id', '=', 'reason_for_rejects.task_id')
-            ->join('users', 'users.id', '=', 'tasks.created_by')
-            ->where('tasks.created_by', '=', Auth::user()->id)
-            ->get();
-        }
-        return $data;
-
-    }
-
-    public function filterTaskByStatus($status){
-        switch($status){
-            case('pending'):
-                $tasks =$this->getTaskByStatus(0);
-                break;
-            case('approved'):
-                $tasks =$this->getTaskByStatus(1);
-                break;
-            case('rejected'):
-                $tasks =$this->getTaskByStatus(2);
-                break;
-            case('done'):
-                $tasks =$this->getTaskByStatus(3);
-                break;
-            case('expired'):
-                $tasks =$this->getTaskByStatus(4);
-                break;
-            case('mark'):            
-                $tasks =  task::join('marks', 'marks.task_id', '=', 'tasks.id')->where('user_id',Auth::user()->id)->get(['tasks.*']);                
-                break;
-            default:
-                $tasks =Task::all();
-        }
-        
-         $tasks = $tasks->map(function($task, $key) {
+        $tasks = $data->map(function ($task, $key) {
             $task->is_mark = $this->isMark($task->id);
             return $task;
         });
         return $tasks;
     }
 
-    public function createResonForTask($data){
+    public function getTask($id)
+    {
+        $task = Task::findOrFail($id);
+        $task->is_mark = $this->isMark($id);
+        return $task;
+    }
+
+    public function createTask($data)
+    {
+        if (isset($data['attachments'])) {
+            $files = [];
+
+            foreach ($data['attachments'] as $key => $file) {
+                $files[] = $this->uploadFile($file);
+            }
+            $data['attachment'] = implode(",", $files);
+        }
+        if (isset($data['audio'])) {
+
+            $data['audio'] = $this->uploadFile($data['audio']);
+        }
+        $task = Task::create($data);
+
+        $title = __("main.task.title");
+        $body = __("main.task.body", ['user' => Auth::user()->name]);
+        $this->notifyUser($task->assign_to, $task->status, $title, $body, $task->id);
+
+        return $task;
+    }
+
+    public function updateTask($status, $id)
+    {
+        $task = Task::findOrFail($id);
+        $status_var = ['pending', 'approved', 'rejected', 'done', 'expired'];
+        if ($task->created_by == Auth::user()->id || Auth::user()->hasRole('admin')) {
+            $task = $this->updateStatus($task, (string)array_search($status, $status_var));
+            if ($status == 'rejected') {
+                $this->deleteTask($id);
+            }
+            $user = $task->assign_to;
+        } elseif ($task->assign_to == Auth::user()->id && $status != 'rejected') {
+            $task = $this->updateStatus($task, (string)array_search($status, $status_var));
+            $user = $task->created_by;
+        } else {
+            throw new GerneralException("Unauthenticated", 401);
+        }
+
+        $title = __("main.task-status.title", ['status' => __('main.status')]);
+        $body = __("main.task-status.body", ['user' => Auth::user()->name]);
+        $this->notifyUser($user, $status, $title, $body, $task->id);
+        $this->deleteReason($id);
+        $task->is_mark = $this->isMark($task->id);
+
+        return $task;
+    }
+
+    public function destoryTask($id)
+    {
+        $task = Task::findOrFail($id);
+        if ($task->created_by == Auth::user()->id) {
+            return $this->deleteTask($id);
+        }
+        throw new GerneralException("Unauthenticated", 401);
+    }
+
+    public function markTask($id)
+    {
+        $task = Task::findOrFail($id);
+        if ($this->markPermission($task)) {
+            $mark = Mark::firstOrCreate(['task_id' => $id]);
+            $task->is_mark = $this->isMark($id);
+            return $task;
+        } else {
+            throw new GerneralException("Unauthenticated", 401);
+        }
+    }
+
+    public function unmarkTask($id)
+    {
+        $task = Task::findOrFail($id);
+        if ($this->markPermission($task)) {
+            $this->deleteMarkByTaskId($id);
+            return $task;
+        } else {
+            throw new GerneralException("Unauthenticated", 401);
+        }
+    }
+
+    public function getReasonTask()
+    {
+        if (Auth::user()->hasRole('admin')) {
+            $data  = ReasonForReject::all();
+        } else {
+            $data = ReasonForReject::join('tasks', 'tasks.id', '=', 'reason_for_rejects.task_id')
+                ->join('users', 'users.id', '=', 'tasks.created_by')
+                ->where('tasks.created_by', '=', Auth::user()->id)
+                ->get();
+        }
+        return $data;
+    }
+
+    public function filterTaskByStatus($status)
+    {
+        switch ($status) {
+            case ('pending'):
+                $tasks = $this->getTaskByStatus(0);
+                break;
+            case ('approved'):
+                $tasks = $this->getTaskByStatus(1);
+                break;
+            case ('rejected'):
+                $tasks = $this->getTaskByStatus(2);
+                break;
+            case ('done'):
+                $tasks = $this->getTaskByStatus(3);
+                break;
+            case ('expired'):
+                $tasks = $this->getTaskByStatus(4);
+                break;
+            case ('mark'):
+                $tasks =  task::join('marks', 'marks.task_id', '=', 'tasks.id')->where('user_id', Auth::user()->id)->get(['tasks.*']);
+                break;
+            default:
+                $tasks = Task::all();
+        }
+
+        $tasks = $tasks->map(function ($task, $key) {
+            $task->is_mark = $this->isMark($task->id);
+            return $task;
+        });
+        return $tasks;
+    }
+
+    public function createResonForTask($data)
+    {
         $task = Task::findOrFail($data['task_id']);
-        if(Auth::user()->id == $task->assign_to){
-            if(isset($data['audio'])){
+        if (Auth::user()->id == $task->assign_to) {
+            if (isset($data['audio'])) {
                 $data['audio'] = $this->uploadFile($data['audio']);
             }
             $data = ReasonForReject::create($data);
-            $this->notifyUser($task->created_by , $task->status ,'reject task' ,'reject task from '.Auth::user()->name.'', $task->id);
-        
-            return $data; 
+
+            $title = __("main.task-status.title", ['status' => __('main.status')]);
+            $body = __("main.task-status.reject_body", ['user' => Auth::user()->name]);
+            $this->notifyUser($task->created_by, $task->status, $title, $body, $task->id);
+
+            return $data;
         }
-        throw new GerneralException("Unauthenticated",401);
+        throw new GerneralException("Unauthenticated", 401);
     }
 
 
-    protected function deleteTask($id){ 
-        DB::transaction(function() use ($id){
+    protected function deleteTask($id)
+    {
+        DB::transaction(function () use ($id) {
             Task::destroy($id);
             $this->deleteMarkByTaskId($id);
         });
     }
-    
-    protected function deleteReason($task_id){
-        ReasonForReject::where('task_id',$task_id)->delete();
+
+    protected function deleteReason($task_id)
+    {
+        ReasonForReject::where('task_id', $task_id)->delete();
     }
 
-    protected function updateStatus($task , $status){
-        $task->update(['status' =>$status]);
+    protected function updateStatus($task, $status)
+    {
+        $task->update(['status' => $status]);
         return $task;
     }
 
-    protected function hashPass($password){
+    protected function hashPass($password)
+    {
         return Hash::make($password);
     }
 
-    
-    
-    protected function notifyUser($id , $type , $title , $body , $task_id){
-        
+
+
+    protected function notifyUser($id, $type, $title, $body, $task_id)
+    {
+
         $user = User::find($id);
-        
+
         $data = [
             "to" => $user->fcm_token,
             "notification" =>
-                [
+            [
                 'title' => $title,
                 'body' => $body,
                 'sound' => 'notification.mp3',
-                ],
+            ],
             "data" => [
                 "type" => $type,
                 'title' => $title,
@@ -219,44 +238,51 @@ class TaskRepository implements TaskRepositoryInterface
             ],
         ];
 
-       
-        
+
+
         return send_notification_FCM($data);
     }
-    
-    protected function uploadFile($file){
+
+    protected function uploadFile($file)
+    {
         $date = Carbon::now();
         $monthName = $date->format('FY');
-        $file_name = time().'.'.$file->extension();
+        $file_name = time() . '.' . $file->extension();
         $full_path = \Storage::path("public/tasks/$monthName/files");
-        $file->move($full_path,$file_name);
-        return  "tasks/$monthName/files/".$file_name;   
-    }
-    
-    protected function deleteOldFile($file){ 
-        \Storage::delete('/public/'.$file); 
-    }
-    
-    protected function isMark($id){
-        return Mark::where('task_id' , $id)->where('user_id',Auth::user()->id)->exists();
+        $file->move($full_path, $file_name);
+        return  "tasks/$monthName/files/" . $file_name;
     }
 
-    protected function markPermission($task){
-        return in_array(Auth::user()->id , [$task->created_by,$task->assign_to]);
+    protected function deleteOldFile($file)
+    {
+        \Storage::delete('/public/' . $file);
     }
 
-    protected function deleteMarkByTaskId($id){
-        Mark::where('user_id',Auth::user()->id)->where('task_id',$id)->delete();
+    protected function isMark($id)
+    {
+        return Mark::where('task_id', $id)->where('user_id', Auth::user()->id)->exists();
     }
 
-    protected function getTaskByStatus($status){
-        $id =Auth::user()->id;
-        return Task::where('status',$status)->where(function($query) use ($id){
-            $query->where('assign_to',$id)->orWhere('created_by',$id);})->get();
+    protected function markPermission($task)
+    {
+        return in_array(Auth::user()->id, [$task->created_by, $task->assign_to]);
     }
 
-    protected function checkTaskExpired(){
-        Task::where('end_date', '<',Carbon::now('Asia/Riyadh')->format('Y-m-d H:i:s'))->update(['status' =>'4']);
+    protected function deleteMarkByTaskId($id)
+    {
+        Mark::where('user_id', Auth::user()->id)->where('task_id', $id)->delete();
     }
 
+    protected function getTaskByStatus($status)
+    {
+        $id = Auth::user()->id;
+        return Task::where('status', $status)->where(function ($query) use ($id) {
+            $query->where('assign_to', $id)->orWhere('created_by', $id);
+        })->get();
+    }
+
+    protected function checkTaskExpired()
+    {
+        Task::where('end_date', '<', Carbon::now('Asia/Riyadh')->format('Y-m-d H:i:s'))->update(['status' => '4']);
+    }
 }

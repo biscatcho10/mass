@@ -26,15 +26,15 @@ class TaskRequest extends FormRequest
         return [
             'title' => 'required',
             'assign_to' =>  'required|exists:users,id',
-            'start_date' => 'required',
-            'end_date' => 'required',
+            'start_date' => 'required| after_or_equal:' . date('Y-m-d h:i'), //solution
+            'end_date' => 'required|after:start_date',
             "attachments"    => "array",
             // "audio" => 'nullable|mimes:application/octet-stream,audio/mpeg,mpga,mp3,wav,m4a,mp4a',
             // "attachments.*"  => "nullable|mimes:doc,pdf,docx,zip",
         ];
     }
 
-    
+
 
     /**
      *  Filters to be applied to the input.
@@ -43,7 +43,7 @@ class TaskRequest extends FormRequest
      */
     public function filters()
     {
-        
+
     }
 }
 

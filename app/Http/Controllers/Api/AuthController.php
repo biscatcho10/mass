@@ -3,11 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\LoginRequest;
 use App\Services\UserService;
@@ -19,10 +14,10 @@ class AuthController extends Controller
 {
     private $userService;
 
-    public function __construct(UserService $userService){     
+    public function __construct(UserService $userService){
         $this->userService = $userService;
     }
-    
+
     public function register(RegisterRequest $request){
         $user = $this->userService->createUser($request->all());
         return response()->json([
@@ -30,7 +25,7 @@ class AuthController extends Controller
             'token' => $user->createToken('API TOKEN')->accessToken,
             'message' => 'User Logged In Successfully' ,
             'user' => UserResource::make($user),
-            
+
         ],200);
     }
 
@@ -42,10 +37,10 @@ class AuthController extends Controller
                 'token' => $exist->createToken('API TOKEN')->accessToken,
                 'message' => 'User Logged In Successfully' ,
                 'user' => UserResource::make($exist),
-                
-            ],200);        
+
+            ],200);
     }
-    
+
     public function logout(){
         $this->userService->logout();
         return response()->json([
@@ -53,7 +48,7 @@ class AuthController extends Controller
             'message' => 'logout successfully '
         ],200);
     }
-      
+
     public function deleteAccount(){
         $this->userService->deleteAcc();
         return response()->json([
@@ -61,9 +56,9 @@ class AuthController extends Controller
             'message' => 'delete successfully '
         ],200);
     }
-    
 
-    protected function saveToken($user , $token_device){    
+
+    protected function saveToken($user , $token_device){
         $user->fcm_token = $token_device;
         $user->save();
         return true;
