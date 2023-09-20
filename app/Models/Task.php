@@ -31,7 +31,7 @@ class Task extends Authenticatable
         'audio',
         'title'
     ];
-    
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -41,14 +41,14 @@ class Task extends Authenticatable
         // 'created_by',
         'created_at',
         'updated_at'
-      
+
     ];
 
     protected static function booted()
     {
         static::creating(function ($task) {
             $task->created_by = Auth::id();
-            $task->status = '0'; 
+            $task->status = '0';
         });
     }
 
@@ -61,16 +61,16 @@ class Task extends Authenticatable
          'mark' => 'boolean',
         
     ];
-    
-    
+
+
     public function getStatusAttribute($value)
     {
         $status = ['pending','approved','rejected','done','expired'];
         return $status[$value];
     }
-    
-   
-    
+
+
+
     public function getAttachmentAttribute($value)
     {
         if(is_null($value)){
@@ -82,27 +82,27 @@ class Task extends Authenticatable
         }
         return $files;
         }
-        
+
     }
-    
+
     public function getAudioAttribute($value)
     {
         if(is_null($value)){
             return $value;
-        }else{   
+        }else{
             return env('APP_URL').'/storage/'.$value;
         }
     }
-    
-    
+
+
      public function reason()
     {
         return $this->belongsTo('App\Models\ReasonForReject','id','task_id');
     }
-    
-        
-     
-    
+
+
+
+
     public function auther()
     {
         return $this->belongsTo('App\Models\User' ,'created_by');
@@ -112,6 +112,6 @@ class Task extends Authenticatable
     {
         return $this->belongsTo('App\Models\User' ,'assign_to');
     }
-    
-    
+
+
 }
