@@ -26,7 +26,7 @@ class TaskRequest extends FormRequest
         return [
             'title' => 'required',
             'assign_to' =>  'required|exists:users,id',
-            'start_date' => 'required| after_or_equal:' . date('Y-m-d h:i'), //solution
+            'start_date' => 'required| after_or_equal:' . date('Y-m-d h:i A'), //solution
             'end_date' => 'required|after:start_date',
             "attachments"    => "array",
             // "audio" => 'nullable|mimes:application/octet-stream,audio/mpeg,mpga,mp3,wav,m4a,mp4a',
