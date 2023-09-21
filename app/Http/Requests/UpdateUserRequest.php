@@ -24,9 +24,8 @@ class UpdateUserRequest extends FormRequest
     public function rules()
     {
         return [
-            
             'name'=> 'nullable|string|max:255',
-            'mobile'=> 'numeric|digits:10|unique:users,mobile',
+            'mobile' => 'numeric|digits:10|unique:users,mobile,' . auth()->user()->id,
             'email'=> 'email|unique:users,email',
             // 'password'=> 'required',
         ];
@@ -39,6 +38,6 @@ class UpdateUserRequest extends FormRequest
      */
     public function filters()
     {
-        
+
     }
 }
