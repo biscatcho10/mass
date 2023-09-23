@@ -89,8 +89,6 @@ class TaskRepository implements TaskRepositoryInterface
 
 
             $title = __("main.task-status.title", ['status' => __('main.status.'. $status)]);
-            dd($title);
-
             $body = __("main.task-status.body", ['user' => Auth::user()->name]);
             $this->notifyUser($user, $status, $title, $body, $task->id);
             $this->deleteReason($id);
