@@ -70,28 +70,36 @@ class TaskRepository implements TaskRepositoryInterface
 
     public function updateTask($status, $id)
     {
-        $task = Task::findOrFail($id);
-        $status_var = ['pending', 'approved', 'rejected', 'done', 'expired'];
-        if ($task->created_by == Auth::user()->id || Auth::user()->hasRole('admin')) {
-            $task = $this->updateStatus($task, (string)array_search($status, $status_var));
+        $task = Task::find($id);
+
+        if ($task) {
+            $status_var = ['pending', 'approved', 'rejected', 'done', 'expired'];
             if ($status == 'rejected') {
-                $this->deleteTask($id);
+                $task = $this->updateStatus($task, (string)array_search($status, $status_var));
+                if ($status == 'rejected') {
+                    $this->deleteTask($id);
+                }
+                $user = $task->assign_to;
+            } elseif ($task->assign_to == Auth::user()->id && $status != 'rejected') {
+                $task = $this->updateStatus($task, (string)array_search($status, $status_var));
+                $user = $task->created_by;
+            } else {
+                throw new GerneralException("Unauthenticated", 401);
             }
-            $user = $task->assign_to;
-        } elseif ($task->assign_to == Auth::user()->id && $status != 'rejected') {
-            $task = $this->updateStatus($task, (string)array_search($status, $status_var));
-            $user = $task->created_by;
-        } else {
-            throw new GerneralException("Unauthenticated", 401);
+
+
+            $title = __("main.task-status.title", ['status' => __('main.status.'. $status)]);
+            dd($title);
+
+            $body = __("main.task-status.body", ['user' => Auth::user()->name]);
+            $this->notifyUser($user, $status, $title, $body, $task->id);
+            $this->deleteReason($id);
+            $task->is_mark = $this->isMark($task->id);
+
+            return $task;
         }
 
-        $title = __("main.task-status.title", ['status' => __('main.status')]);
-        $body = __("main.task-status.body", ['user' => Auth::user()->name]);
-        $this->notifyUser($user, $status, $title, $body, $task->id);
-        $this->deleteReason($id);
-        $task->is_mark = $this->isMark($task->id);
-
-        return $task;
+        throw new GerneralException("Task not found", 401);
     }
 
     public function destoryTask($id)
@@ -180,7 +188,7 @@ class TaskRepository implements TaskRepositoryInterface
             }
             $data = ReasonForReject::create($data);
 
-            $title = __("main.task-status.title", ['status' => __('main.status')]);
+            $title = __("main.task-status.title", ['status' => __('main.status.' . $task->status)]);
             $body = __("main.task-status.reject_body", ['user' => Auth::user()->name]);
             $this->notifyUser($task->created_by, $task->status, $title, $body, $task->id);
 
