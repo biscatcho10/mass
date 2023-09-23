@@ -55,6 +55,7 @@ class TaskRepository implements TaskRepositoryInterface
             }
             $data['attachment'] = implode(",", $files);
         }
+
         if (isset($data['audio'])) {
 
             $data['audio'] = $this->uploadFile($data['audio']);
@@ -73,7 +74,7 @@ class TaskRepository implements TaskRepositoryInterface
         $task = Task::find($id);
 
         if ($task) {
-            $status_var = ['pending', 'approved', 'rejected', 'done', 'expired'];
+            $status_var = ['pending', 'approved', 'rejected', 'done', 'expired', 'delayed'];
             if ($status == 'rejected') {
                 $task = $this->updateStatus($task, (string)array_search($status, $status_var));
                 if ($status == 'rejected') {
@@ -185,6 +186,11 @@ class TaskRepository implements TaskRepositoryInterface
                 $data['audio'] = $this->uploadFile($data['audio']);
             }
             $data = ReasonForReject::create($data);
+
+            // new => make task status is delayed
+            $status_var = ['pending', 'approved', 'rejected', 'done', 'expired', 'delayed'];
+            $task = $this->updateStatus($task, (string)array_search('delayed', $status_var));
+
 
             $title = __("main.task-status.title", ['status' => __('main.status.' . $task->status)]);
             $body = __("main.task-status.reject_body", ['user' => Auth::user()->name]);

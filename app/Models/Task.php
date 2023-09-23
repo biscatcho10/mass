@@ -59,13 +59,13 @@ class Task extends Authenticatable
      */
     protected $casts = [
          'mark' => 'boolean',
-        
+
     ];
 
 
     public function getStatusAttribute($value)
     {
-        $status = ['pending','approved','rejected','done','expired'];
+        $status = ['pending','approved','rejected','done','expired', 'delayed'];
         return $status[$value];
     }
 
@@ -99,8 +99,6 @@ class Task extends Authenticatable
     {
         return $this->belongsTo('App\Models\ReasonForReject','id','task_id');
     }
-
-
 
 
     public function auther()

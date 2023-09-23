@@ -77,6 +77,7 @@ return [
         'rejected' => 'rejected',
         'done' => 'done',
         'expired' => 'expired',
+        'delayed' => 'delayed',
     ],
 
     /** Notifications **/

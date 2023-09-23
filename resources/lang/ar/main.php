@@ -73,6 +73,7 @@ return [
         'rejected' => 'مرفوضة',
         'done' => 'منتهية',
         'expired' => 'منتهية الصلاحية',
+        'delayed' => 'مؤجلة'
     ],
 
     /** Notifications **/

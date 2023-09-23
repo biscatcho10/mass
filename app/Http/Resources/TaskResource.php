@@ -1,10 +1,10 @@
 <?php
- 
+
 namespace App\Http\Resources;
- 
+
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\UserResource;
- 
+
 class TaskResource extends JsonResource
 {
     /**
@@ -15,7 +15,7 @@ class TaskResource extends JsonResource
      */
     public function toArray($request)
     {
-        return[ 
+        return[
             "id" => $this->id,
             'title' => $this->title,
             "description" => $this->description,
@@ -27,11 +27,8 @@ class TaskResource extends JsonResource
             'attachments' => $this->attachment,
             'audio' => $this->audio,
             'is_mark' => $this->is_mark ?? False,
-            
-            
-            
         ];
-        
+
     }
-    
+
 }
